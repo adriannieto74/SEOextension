@@ -10,7 +10,7 @@
   <div class="app">
     <header class="hero">
       <div>
-        <h1>SEO Slider Auditor</h1>
+        <h1>SEO Slider Auditor.Holaa</h1>
         <p>Revisión visual de una URL con checks automáticos, heurísticos y manuales.</p>
       </div>
       <div class="score-card">
@@ -26,6 +26,16 @@
         <input id="urlInput" type="url" placeholder="https://tusitio.com" value="https://example.com">
         <button id="analyzeBtn">Analizar</button>
       </div>
+
+      <!-- NUEVA OPCIÓN AÑADIDA -->
+      <div class="row" style="margin-top:10px;">
+        <label for="analysisType">Tipo de análisis:</label>
+        <select id="analysisType">
+          <option value="basic">Básico</option>
+          <option value="advanced">Avanzado</option>
+        </select>
+      </div>
+
       <div id="status" class="status">Introduce una URL y pulsa Analizar.</div>
     </section>
 
@@ -37,6 +47,8 @@
 
     <section id="results" class="results"></section>
   </div>
+
+  <!-- BOTÓN MEJORADO -->
   <button id="copyReport" style="width: 100%; margin-top: 20px; background: #20316b;">
       Copiar Informe al Portapapeles
   </button>

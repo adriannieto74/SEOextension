@@ -4,9 +4,11 @@ const scoreEl = document.getElementById('score');
 const scoreTextEl = document.getElementById('scoreText');
 const copyBtn = document.getElementById('copyReport');
 
-// Configuración de los checks con sus pesos para la puntuación
+// Configuración de los checks con sus pesos
 const CHECKS = [
   { key: 'headings', weight: 10, type: 'automatic', title: 'Jerarquía H1-H3', desc: 'Verifica la presencia de un único H1 y la existencia de H2.' },
+  { key: 'metaDescription', weight: 8, type: 'automatic', title: 'Meta Description', desc: 'Verifica existencia y longitud adecuada (120-160 caracteres).' },
+  { key: 'openGraph', weight: 6, type: 'automatic', title: 'Open Graph', desc: 'Comprueba etiquetas og:title y og:description.' },
   { key: 'wordCount', weight: 6, type: 'automatic', title: 'Extensión del Contenido', desc: 'Evalúa si el volumen de texto es suficiente para evitar el thin content.' },
   { key: 'morePages', weight: 8, type: 'automatic', title: 'Densidad de enlaces', desc: 'Busca enlaces internos para confirmar que no es una única página.' },
   { key: 'googleAnalytics', weight: 8, type: 'heuristic', title: 'Google Analytics', desc: 'Detecta scripts de GA4 o Google Tag Manager.' },
@@ -20,10 +22,9 @@ const CHECKS = [
   { key: 'searchPresence', weight: 4, type: 'manual', title: 'Presencia en Buscadores', desc: 'Revisión manual recomendada mediante comando site:.' },
   { key: 'githubRoot', weight: 3, type: 'manual', title: 'Raíz del Repositorio', desc: 'Verificar manualmente si es la raíz del proyecto.' },
   { key: 'trends', weight: 3, type: 'manual', title: 'Google Trends', desc: 'Revisar tendencia de búsqueda de la temática.' },
-  { key: 'sitemapIndexed', weight: 4, type: 'manual', title: 'Indexación de Sitemap', desc: 'Comparar URLs del sitemap con el índice de Google.' }
+  { key: 'sitemapIndexed', weight: 4, type: 'manual', title: 'Indexación de Sitemap', desc: 'Cruzar datos de Search Console.' }
 ];
 
-// Event Listeners
 document.getElementById('analyzeBtn').addEventListener('click', analyze);
 
 function setStatus(text) {
@@ -45,7 +46,6 @@ async function analyze() {
   scoreEl.textContent = '...';
   scoreTextEl.textContent = 'Analizando';
 
-  // Obtener la pestaña activa
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.url.startsWith('http')) {
     setStatus('Por favor, abre una página web válida (http/https).');
@@ -57,7 +57,6 @@ async function analyze() {
   setStatus(`Analizando: ${base.hostname}...`);
 
   try {
-    // Inyectar script para extraer datos del DOM real
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
@@ -75,34 +74,61 @@ async function analyze() {
     });
 
     const doc = toDoc(result.html);
+
+    // META DESCRIPTION
+    const metaDescTag = doc.querySelector('meta[name="description"]');
+    const metaDescContent = metaDescTag ? metaDescTag.getAttribute('content') : '';
+    const metaDescLength = metaDescContent ? metaDescContent.length : 0;
+
+    let metaDescStatus = 'bad';
+    if (metaDescLength >= 120 && metaDescLength <= 160) {
+      metaDescStatus = 'ok';
+    } else if (metaDescLength > 0) {
+      metaDescStatus = 'warn';
+    }
+
+    // OPEN GRAPH
+    const ogTitle = doc.querySelector('meta[property="og:title"]');
+    const ogDesc = doc.querySelector('meta[property="og:description"]');
+    const openGraphStatus = (ogTitle && ogDesc) ? 'ok' : 'warn';
+
     const anchors = [...doc.querySelectorAll('a[href]')].map(a => a.getAttribute('href'));
     const internalLinks = anchors.filter(h => h && (h.startsWith('/') || h.includes(base.hostname)));
     const externalLinks = anchors.filter(h => h && h.includes('://') && !h.includes(base.hostname));
 
-    // Verificaciones técnicas externas (robots y sitemap)
     let robotsOk = false;
     try {
       const r = await fetch(pick(base, '/robots.txt'));
       robotsOk = r.ok;
-    } catch(e) {}
+    } catch (e) { }
 
     let sitemapOk = false;
     try {
       const s = await fetch(pick(base, '/sitemap.xml'));
       sitemapOk = s.ok;
-    } catch(e) {}
+    } catch (e) { }
 
-    // Lógica de validación previa al Payload
     const wordCountNum = result.text.split(/\s+/).filter(w => w.length > 0).length;
     const hasSocialLinks = /linkedin\.com|twitter\.com|facebook\.com|instagram\.com/i.test(result.html);
     const bingMeta = !!doc.querySelector('meta[name="msvalidate.01"]');
     const accOk = !!result.lang && result.hasTitle && result.imgsWithoutAlt === 0;
 
-    // Construcción del objeto de resultados
     const payload = {
       headings: {
         status: result.h1s === 1 ? 'ok' : (result.h1s > 1 ? 'bad' : 'warn'),
         detail: `H1: ${result.h1s} (Ideal: 1). H2: ${result.h2s}.`
+      },
+      metaDescription: {
+        status: metaDescStatus,
+        detail: metaDescContent
+          ? `Longitud: ${metaDescLength} caracteres.`
+          : 'No se encontró meta description.'
+      },
+      openGraph: {
+        status: openGraphStatus,
+        detail: (ogTitle && ogDesc)
+          ? 'Etiquetas Open Graph principales detectadas.'
+          : 'Faltan etiquetas og:title u og:description.'
       },
       wordCount: {
         status: wordCountNum > 300 ? 'ok' : 'warn',
@@ -150,7 +176,7 @@ async function analyze() {
   }
 }
 
-function renderResults(payload, host) {
+function renderResults(payload) {
   resultsEl.innerHTML = '';
   let score = 0;
   let maxScore = 0;
@@ -165,12 +191,19 @@ function renderResults(payload, host) {
 
     const item = document.createElement('div');
     item.className = 'item';
-    const statusLabel = data.status === 'ok' ? 'Cumple' : data.status === 'bad' ? 'Error' : data.status === 'warn' ? 'Mejorable' : 'Manual';
+
+    const statusLabel =
+      data.status === 'ok' ? 'Cumple' :
+      data.status === 'bad' ? 'Error' :
+      data.status === 'warn' ? 'Mejorable' : 'Manual';
 
     item.innerHTML = `
       <div class="item-head">
-        <div>
-          <h3>${check.title}</h3>
+        <div class="item-info">
+          <div class="title-row">
+            ${iconSvg}
+            <h3>${check.title}</h3>
+          </div>
           <p>${check.desc}</p>
         </div>
         <span class="pill ${data.status}">${statusLabel}</span>
@@ -180,47 +213,12 @@ function renderResults(payload, host) {
       </div>
     `;
 
-    // Botón de acción interactiva para accesibilidad
-    if (check.key === 'accessibility' && data.status !== 'ok') {
-      const btnAction = document.createElement('button');
-      btnAction.textContent = "Resaltar imágenes sin ALT";
-      btnAction.style.cssText = "font-size:10px; margin-top:8px; padding:6px 10px; background:#ef4444; color:white; border:none; border-radius:12px; cursor:pointer; font-weight:bold;";
-      btnAction.onclick = highlightMissingAlt;
-      item.appendChild(btnAction);
-    }
-
     resultsEl.appendChild(item);
   }
 
   const finalScore = Math.round((score / maxScore) * 100);
   scoreEl.textContent = finalScore;
-  scoreTextEl.textContent = finalScore >= 80 ? 'Muy bien' : (finalScore >= 60 ? 'Aceptable' : 'A mejorar');
-}
-
-async function highlightMissingAlt() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: () => {
-      const targetImgs = document.querySelectorAll('img:not([alt])');
-      targetImgs.forEach(img => {
-        img.style.outline = "5px solid red";
-        img.style.outlineOffset = "2px";
-        img.style.boxShadow = "0 0 15px red";
-      });
-      alert(`Se han resaltado ${targetImgs.length} imágenes sin atributo ALT.`);
-    }
-  });
-}
-
-// Lógica para el botón de copiar informe
-if (copyBtn) {
-  copyBtn.addEventListener('click', () => {
-    const report = Array.from(document.querySelectorAll('.item'))
-      .map(i => `${i.querySelector('h3').innerText}: ${i.querySelector('.pill').innerText}`)
-      .join('\n');
-    const header = `Auditoría SEO Pro\nNota: ${scoreEl.textContent}/100 (${scoreTextEl.textContent})\n\n`;
-    navigator.clipboard.writeText(header + report);
-    alert("¡Informe copiado al portapapeles!");
-  });
+  scoreTextEl.textContent =
+    finalScore >= 80 ? 'Muy bien' :
+    (finalScore >= 60 ? 'Aceptable' : 'A mejorar');
 }
