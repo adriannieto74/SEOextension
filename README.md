@@ -230,31 +230,10 @@ Si quieres una evolución más avanzada, se puede ampliar con:
 
 ---
 
-## Licencia
-
-Puedes añadir aquí la licencia que prefieras, por ejemplo:
-
-- MIT
-- Apache 2.0
-- uso educativo interno
-
-Ejemplo:
-
-```text
-MIT License
-```
-
----
-
 ## Autor
 
-Si quieres, aquí puedes poner tu nombre, tu GitHub, tu web o una referencia al proyecto docente.
-
-Ejemplo:
-
-- Autor: Tu nombre
-- Web: `https://tusitio.com`
-- LinkedIn: `https://linkedin.com/in/tuusuario`
+- Autor: Jesusninoc
+- Web: `https://jesusninoc.com`
 
 ---
 
