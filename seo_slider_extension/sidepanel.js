@@ -1,4 +1,12 @@
-// ============= ELEMENTOS DOM =============
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. DETECCIÓN AUTOMÁTICA: Al abrir, captura la URL de la pestaña activa
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.url && tab.url.startsWith('http')) {
+    urlInput.value = tab.url;
+    analyze(); // Lanza el análisis automáticamente al abrir
+  }
+});
+
 const urlInput = document.getElementById('urlInput');
 const analyzeBtn = document.getElementById('analyzeBtn');
 const statusEl = document.getElementById('status');
@@ -6,48 +14,84 @@ const resultsEl = document.getElementById('results');
 const scoreEl = document.getElementById('score');
 const scoreTextEl = document.getElementById('scoreText');
 const exportBtn = document.getElementById('exportBtn');
-const historyBtn = document.getElementById('historyBtn');
-const historyModal = document.getElementById('historyModal');
-const historyList = document.getElementById('historyList');
-const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-const filterBtns = document.querySelectorAll('.filter-btn');
-const modalClose = document.querySelector('.modal-close');
 
-// ============= CHECKS DISPONIBLES =============
+// 2. ENLACES DE AYUDA: Añadidos a la configuración de los checks
 const CHECKS = [
-  // === SEO CHECKS ===
-  { key: 'https', category: 'seo', weight: 8, type: 'automatic', title: 'HTTPS habilitado', desc: 'Verifica que la web use protocolo HTTPS seguro.' },
-  { key: 'mobileReady', category: 'seo', weight: 10, type: 'automatic', title: 'Mobile-friendly', desc: 'Comprueba viewport meta y responsive design.' },
-  { key: 'metaTitle', category: 'seo', weight: 12, type: 'automatic', title: 'Meta Title presente', desc: 'Valida que exista title y tenga longitud adecuada (30-60 caracteres).' },
-  { key: 'metaDescription', category: 'seo', weight: 12, type: 'automatic', title: 'Meta Description', desc: 'Verifica descripción meta (120-160 caracteres recomendado).' },
-  { key: 'h1Structure', category: 'seo', weight: 10, type: 'automatic', title: 'Estructura H1', desc: 'Valida que haya exactamente un H1 y estructura jerárquica correcta.' },
-  { key: 'canonicalTag', category: 'seo', weight: 8, type: 'automatic', title: 'Canonical Tag', desc: 'Comprueba presencia de etiqueta canonical para evitar duplicados.' },
-  { key: 'ogTags', category: 'seo', weight: 6, type: 'heuristic', title: 'Open Graph Tags', desc: 'Detecta meta tags para compartir en redes sociales.' },
-  { key: 'structuredData', category: 'seo', weight: 10, type: 'automatic', title: 'Structured Data (Schema)', desc: 'Detecta JSON-LD para rich snippets en buscadores.' },
-  { key: 'morePages', category: 'seo', weight: 10, type: 'automatic', title: 'Múltiples páginas', desc: 'Busca enlaces internos y sitemap para confirmar estructura.' },
-  { key: 'robots', category: 'seo', weight: 8, type: 'automatic', title: 'Robots.txt presente', desc: 'Comprueba si responde /robots.txt y revisa contenido.' },
-  { key: 'sitemap', category: 'seo', weight: 8, type: 'automatic', title: 'Sitemap.xml presente', desc: 'Verifica existencia y número de URLs en sitemap.' },
-  { key: 'searchPresence', category: 'seo', weight: 4, type: 'manual', title: 'Presencia en buscadores', desc: 'Revisa presencia en Google y Bing manualmente.' },
-  
-  // === ACCESIBILIDAD ===
-  { key: 'langAttribute', category: 'accessibility', weight: 10, type: 'automatic', title: 'Atributo lang', desc: 'Valida que HTML tenga atributo lang definido.' },
-  { key: 'imageAlt', category: 'accessibility', weight: 10, type: 'automatic', title: 'Alt en imágenes', desc: 'Comprueba que todas las imágenes tengan alt text.' },
-  { key: 'formLabels', category: 'accessibility', weight: 8, type: 'automatic', title: 'Labels en formularios', desc: 'Verifica que inputs tengan labels asociados.' },
-  { key: 'colorContrast', category: 'accessibility', weight: 6, type: 'heuristic', title: 'Contraste de color', desc: 'Estima si hay suficiente contraste (heurístico).' },
-  { key: 'keyboardNav', category: 'accessibility', weight: 8, type: 'heuristic', title: 'Navegación por teclado', desc: 'Detecta si los botones son accesibles por teclado.' },
-  
-  // === CHECKS TÉCNICOS ===
-  { key: 'errorHandling', category: 'technical', weight: 8, type: 'heuristic', title: 'Manejo de errores 404', desc: 'Prueba una URL inexistente para validar control de errores.' },
-  { key: 'noindex', category: 'technical', weight: 10, type: 'automatic', title: 'No indexada (verificación)', desc: 'Comprueba si hay noindex que bloquee indexación.' },
-  { key: 'securityHeaders', category: 'technical', weight: 6, type: 'heuristic', title: 'Headers de seguridad', desc: 'Detecta X-Frame-Options, CSP y otros headers de seguridad.' },
-  { key: 'browserCache', category: 'technical', weight: 5, type: 'heuristic', title: 'Cache del navegador', desc: 'Verifica headers Cache-Control para optimizar caché.' },
-  
-  // === RENDIMIENTO ===
-  { key: 'googleAnalytics', category: 'performance', weight: 8, type: 'heuristic', title: 'Google Analytics', desc: 'Detecta GA/GTM para tracking de métricas.' },
-  { key: 'ads', category: 'performance', weight: 5, type: 'heuristic', title: 'Red de anuncios', desc: 'Detecta Google AdSense, DoubleClick y otras redes.' },
-  { key: 'links', category: 'performance', weight: 8, type: 'heuristic', title: 'Estructura de enlaces', desc: 'Analiza enlaces internos y externos.' },
-  { key: 'social', category: 'performance', weight: 6, type: 'heuristic', title: 'Redes sociales', desc: 'Detecta presencia en LinkedIn y otras plataformas.' },
-  { key: 'bing', category: 'performance', weight: 8, type: 'heuristic', title: 'Bing Webmaster Tools', desc: 'Detecta meta de verificación de Bing (msvalidate.01).' },
+  { 
+    key: 'morePages', weight: 10, type: 'automatic', title: 'Más de una página', 
+    desc: 'Busca enlaces internos y sitemap para confirmar que no es una "one-page".',
+    helpUrl: 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide?hl=es#organize-hierarchy'
+  },
+  { 
+    key: 'searchPresence', weight: 4, type: 'manual', title: 'Presencia en buscadores', 
+    desc: 'Verificación manual en Google y Bing.',
+    helpUrl: 'https://developers.google.com/search/docs/monitor-debug/search-operators/all-search-operators?hl=es'
+  },
+  { 
+    key: 'googleAnalytics', weight: 8, type: 'heuristic', title: 'Google Analytics', 
+    desc: 'Detecta scripts de GA4 o Google Tag Manager.',
+    helpUrl: 'https://support.google.com/analytics/answer/1008015?hl=en'
+  },
+  { 
+    key: 'robots', weight: 8, type: 'automatic', title: 'Archivo robots.txt', 
+    desc: 'Comprueba si el archivo existe y es accesible.',
+    helpUrl: 'https://developers.google.com/search/docs/crawling-indexing/robots/intro?hl=es'
+  },
+  { 
+    key: 'githubRoot', weight: 3, type: 'manual', title: 'Raíz de Repositorio', 
+    desc: 'Revisión de la estructura en GitHub.',
+    helpUrl: 'https://pages.github.com/'
+  },
+  { 
+    key: 'sitemap', weight: 8, type: 'automatic', title: 'Mapa del sitio (Sitemap)', 
+    desc: 'Verifica la existencia de sitemap.xml.',
+    helpUrl: 'https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview?hl=es'
+  },
+  { 
+    key: 'errorHandling', weight: 8, type: 'heuristic', title: 'Manejo de errores 404', 
+    desc: 'Prueba si una página inexistente devuelve un error controlado.',
+    helpUrl: 'https://developers.google.com/search/docs/crawling-indexing/soft-404-errors?hl=es'
+  },
+  { 
+    key: 'browsers', weight: 3, type: 'manual', title: 'Compatibilidad de navegadores', 
+    desc: 'Requiere prueba visual en diferentes motores.',
+    helpUrl: 'https://developer.mozilla.org/es/docs/Learn/Tools_and_testing/Cross_browser_testing'
+  },
+  { 
+    key: 'links', weight: 8, type: 'heuristic', title: 'Enlaces internos/externos', 
+    desc: 'Analiza la salud del enlazado de la página.',
+    helpUrl: 'https://developers.google.com/search/docs/fundamentals/seo-starter-guide?hl=es#optimize-content'
+  },
+  { 
+    key: 'trends', weight: 3, type: 'manual', title: 'Tendencias de búsqueda', 
+    desc: 'Compara la temática con Google Trends.',
+    helpUrl: 'https://trends.google.com/trends/'
+  },
+  { 
+    key: 'sitemapIndexed', weight: 4, type: 'manual', title: 'Indexación de Sitemap', 
+    desc: 'Comprobar si las URLs del sitemap están en el índice.',
+    helpUrl: 'https://search.google.com/search-console/about'
+  },
+  { 
+    key: 'ads', weight: 5, type: 'heuristic', title: 'Publicidad (Ads)', 
+    desc: 'Detecta presencia de AdSense u otras redes.',
+    helpUrl: 'https://support.google.com/adsense/answer/75440?hl=en'
+  },
+  { 
+    key: 'accessibility', weight: 12, type: 'heuristic', title: 'Accesibilidad SEO', 
+    desc: 'Atributos alt, lang y títulos correctos.',
+    helpUrl: 'https://developers.google.com/search/docs/appearance/visual-elements-gallery?hl=es'
+  },
+  { 
+    key: 'social', weight: 6, type: 'heuristic', title: 'Señales Sociales', 
+    desc: 'Presencia de enlaces a LinkedIn o grafos sociales.',
+    helpUrl: 'https://ogp.me/'
+  },
+  { 
+    key: 'bing', weight: 8, type: 'heuristic', title: 'Bing Webmaster Tools', 
+    desc: 'Detecta meta de verificación de Bing.',
+    helpUrl: 'https://www.bing.com/webmasters/help/getting-started-gsw-60c1d291'
+  }
 ];
 
 // ============= EVENT LISTENERS =============
@@ -85,22 +129,10 @@ function normalizeUrl(value) {
 }
 
 async function fetchText(url) {
-  try {
-    const res = await fetch(url, { redirect: 'follow', cache: 'no-store' });
-    const text = await res.text();
-    return { res, text };
-  } catch (error) {
-    return { res: { ok: false, status: 0 }, text: '' };
-  }
-}
-
-async function fetchHeaders(url) {
-  try {
-    const res = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-    return res.headers;
-  } catch {
-    return new Headers();
-  }
+  // Manejo de caché y errores para optimizar peticiones
+  const res = await fetch(url, { redirect: 'follow', cache: 'no-store' });
+  const text = await res.text();
+  return { res, text };
 }
 
 function toDoc(html) {
@@ -248,15 +280,21 @@ async function analyze() {
     return;
   }
 
-  setStatus('Analizando sitio web completo...');
+  setStatus('Analizando señales SEO en paralelo...');
 
   try {
-    const homepage = await fetchText(baseUrl);
-    const doc = toDoc(homepage.text);
     const base = new URL(baseUrl);
     const headers = await fetchHeaders(baseUrl);
 
-    // === EXTRACCIÓN DE DATOS ===
+    // 3. ASINCRONÍA EN PARALELO: Ejecutamos todas las peticiones de red simultáneamente
+    const [homepage, robotsResult, sitemapResult, errorResult] = await Promise.all([
+      fetchText(baseUrl),
+      fetchText(pick(base, '/robots.txt')).catch(() => ({ res: { ok: false }, text: '' })),
+      fetchText(pick(base, '/sitemap.xml')).catch(() => ({ res: { ok: false }, text: '' })),
+      fetch(pick(base, `/seo-audit-404-${Date.now()}`), { redirect: 'follow' }).catch(() => ({ ok: false, status: 'Error' }))
+    ]);
+
+    const doc = toDoc(homepage.text);
     const anchors = [...doc.querySelectorAll('a[href]')].map(a => a.getAttribute('href'));
     const resolved = unique(anchors.map(h => {
       try { return new URL(h, base).toString(); } catch { return null; }
@@ -270,46 +308,28 @@ async function analyze() {
 
     const scriptSrcs = [...doc.querySelectorAll('script[src]')].map(s => s.src).join('\n');
     const imgs = [...doc.images];
+    const imgsWithoutAlt = imgs.filter(i => !i.hasAttribute('alt')).length;
+    const forms = [...doc.forms];
+    const labels = [...doc.querySelectorAll('label[for]')];
     const linkedInFound = /linkedin\.com/i.test(homepage.text) || resolved.some(u => /linkedin\.com/i.test(u));
     const bingVerification = !!doc.querySelector('meta[name="msvalidate.01"]');
 
-    // === ROBOTS.TXT ===
-    let robotsInfo = { exists: false, ok: false, note: 'No encontrado' };
-    try {
-      const robots = await fetchText(pick(base, '/robots.txt'));
-      robotsInfo.exists = robots.res.ok;
-      robotsInfo.ok = robots.res.ok;
-      robotsInfo.note = robots.res.ok ? `HTTP ${robots.res.status}. Detectado.` : `HTTP ${robots.res.status}`;
-    } catch {
-      robotsInfo.note = 'No se pudo leer robots.txt';
-    }
+    // Procesar Robots
+    const robotsInfo = {
+      exists: robotsResult.res.ok,
+      note: robotsResult.res.ok ? `Detectado (${robotsResult.text.length} bytes)` : `No encontrado (HTTP ${robotsResult.res.status || 'N/A'})`
+    };
 
-    // === SITEMAP ===
-    let sitemapInfo = { exists: false, count: 0, note: 'No encontrado' };
-    try {
-      const sitemap = await fetchText(pick(base, '/sitemap.xml'));
-      sitemapInfo.exists = sitemap.res.ok;
-      if (sitemap.res.ok) {
-        const count = (sitemap.text.match(/<loc>/gi) || []).length;
-        sitemapInfo.count = count;
-        sitemapInfo.note = `HTTP ${sitemap.res.status}. URLs: ${count}`;
-      } else {
-        sitemapInfo.note = `HTTP ${sitemap.res.status}`;
-      }
-    } catch {
-      sitemapInfo.note = 'No se pudo leer sitemap.xml';
-    }
+    // Procesar Sitemap
+    const sitemapCount = (sitemapResult.text.match(/<loc>/gi) || []).length;
+    const sitemapInfo = {
+      exists: sitemapResult.res.ok,
+      count: sitemapCount,
+      note: sitemapResult.res.ok ? `Detectado. URLs: ${sitemapCount}` : `No encontrado`
+    };
 
-    // === MANEJO DE ERRORES ===
-    let errorInfo = { controlled: false, note: 'No comprobado' };
-    try {
-      const fakeUrl = pick(base, `/audit-${Date.now()}-missing`);
-      const res = await fetch(fakeUrl, { redirect: 'follow', cache: 'no-store' });
-      errorInfo.controlled = res.status === 404 || res.redirected;
-      errorInfo.note = `HTTP ${res.status}${res.redirected ? ' (con redirección)' : ''}`;
-    } catch {
-      errorInfo.note = 'No se pudo probar la URL inexistente';
-    }
+    // Procesar Error Handling
+    const errorControlled = errorResult.ok === false || errorResult.status === 404 || errorResult.redirected;
 
     // === DETECCIONES MULTI-PÁGINA ===
     const hasMultiplePages = internalLinks.filter(u => {
@@ -321,91 +341,33 @@ async function analyze() {
 
     // === COMPILAR RESULTADOS ===
     const payload = {
-      https: {
-        status: baseUrl.startsWith('https') ? 'ok' : 'bad',
-        detail: baseUrl.startsWith('https') ? 'HTTPS activado' : 'Sitio sin HTTPS (inseguro)'
-      },
-      mobileReady: checkViewportMeta(doc),
-      metaTitle: validateMetaTitle(doc),
-      metaDescription: validateMetaDescription(doc),
-      h1Structure: validateH1Structure(doc),
-      canonicalTag: checkCanonicalTag(doc),
-      ogTags: checkOgTags(doc),
-      structuredData: checkStructuredData(doc),
-      morePages: {
-        status: hasMultiplePages ? 'ok' : 'warn',
-        detail: `Enlaces internos: ${internalLinks.length}. Sitemap: ${sitemapInfo.count} URLs.`
-      },
-      robots: {
-        status: robotsInfo.exists ? 'ok' : 'bad',
-        detail: robotsInfo.note
-      },
-      sitemap: {
-        status: sitemapInfo.exists ? 'ok' : 'bad',
-        detail: sitemapInfo.note
-      },
-      searchPresence: {
-        status: 'manual',
-        detail: `Revisar site:${base.hostname} en Google y Bing`
-      },
-      langAttribute: {
-        status: !!doc.documentElement.lang ? 'ok' : 'warn',
-        detail: !!doc.documentElement.lang ? `Lang: ${doc.documentElement.lang}` : 'Sin atributo lang'
-      },
-      imageAlt: checkImageAlt(doc),
-      formLabels: checkFormLabels(doc),
-      colorContrast: {
-        status: 'warn',
-        detail: 'Requiere verificación manual con herramientas especializadas'
-      },
-      keyboardNav: {
-        status: 'warn',
-        detail: 'Requiere prueba manual con teclado'
-      },
-      errorHandling: {
-        status: errorInfo.controlled ? 'ok' : 'warn',
-        detail: errorInfo.note
-      },
-      noindex: checkNoindex(doc),
-      securityHeaders: {
-        status: 'warn',
-        detail: 'Verificar headers X-Frame-Options, CSP, etc. en devtools'
-      },
-      browserCache: {
-        status: 'warn',
-        detail: 'Revisar Cache-Control headers en Network tab'
-      },
+      morePages: { status: hasMultiplePages ? 'ok' : 'bad', detail: `Internos: ${internalLinks.length}. Sitemap: ${sitemapInfo.count}.` },
+      searchPresence: { status: 'manual', detail: `Revisar site:${base.hostname}` },
       googleAnalytics: {
         status: isProbablyGoogleAnalytics(homepage.text + '\n' + scriptSrcs) ? 'ok' : 'warn',
-        detail: isProbablyGoogleAnalytics(homepage.text + '\n' + scriptSrcs) ? 'GA/GTM detectado' : 'Sin GA detectable'
+        detail: isProbablyGoogleAnalytics(homepage.text + '\n' + scriptSrcs) ? 'Patrones GA detectados.' : 'Sin señales de analítica.'
       },
-      ads: {
-        status: detectAds(homepage.text + '\n' + scriptSrcs) ? 'ok' : 'warn',
-        detail: detectAds(homepage.text + '\n' + scriptSrcs) ? 'Red de anuncios detectada' : 'Sin anuncios detectados'
-      },
-      links: {
-        status: (internalLinks.length > 1 && externalLinks.length > 0) ? 'ok' : 'warn',
-        detail: `Internos: ${internalLinks.length}. Externos: ${externalLinks.length}.`
-      },
-      social: {
-        status: linkedInFound ? 'ok' : 'warn',
-        detail: linkedInFound ? 'LinkedIn detectado' : 'Sin LinkedIn'
-      },
-      bing: {
-        status: bingVerification ? 'ok' : 'warn',
-        detail: bingVerification ? 'Meta msvalidate.01 presente' : 'Sin verificación de Bing'
-      }
+      robots: { status: robotsInfo.exists ? 'ok' : 'bad', detail: robotsInfo.note },
+      githubRoot: { status: 'manual', detail: 'Verificar en el repo fuente.' },
+      sitemap: { status: sitemapInfo.exists ? 'ok' : 'bad', detail: sitemapInfo.note },
+      errorHandling: { status: errorControlled ? 'ok' : 'warn', detail: `Respuesta HTTP ${errorResult.status}` },
+      browsers: { status: 'manual', detail: 'Requiere multi-navegador.' },
+      links: { status: (internalLinks.length > 1 && externalLinks.length > 0) ? 'ok' : 'warn', detail: `In: ${internalLinks.length} | Out: ${externalLinks.length}` },
+      trends: { status: 'manual', detail: `Comparar temática en Trends.` },
+      sitemapIndexed: { status: 'manual', detail: 'Comprobar indexación manual.' },
+      ads: { status: detectAds(homepage.text + '\n' + scriptSrcs) ? 'ok' : 'warn', detail: detectAds(homepage.text + '\n' + scriptSrcs) ? 'Anuncios detectados.' : 'Sin anuncios.' },
+      accessibility: { status: accessibilityOk ? 'ok' : 'warn', detail: `Alt faltantes: ${imgsWithoutAlt}. Lang: ${!!doc.documentElement.getAttribute('lang')}` },
+      social: { status: linkedInFound ? 'ok' : 'warn', detail: linkedInFound ? 'LinkedIn detectado.' : 'Sin LinkedIn.' },
+      bing: { status: bingVerification ? 'ok' : 'warn', detail: bingVerification ? 'Verificado.' : 'Falta meta Bing.' }
     };
 
     renderResults(payload, base.hostname);
-    saveToHistory(base.hostname, payload);
-    setStatus(`✓ Análisis completado para ${base.hostname}`);
+    setStatus(`Análisis finalizado.`);
   } catch (err) {
     console.error(err);
-    setStatus('❌ No se pudo analizar la URL. Intenta con otra o verifica permisos.');
+    setStatus('Error al analizar. Posible bloqueo por CORS o conectividad.');
     scoreEl.textContent = '0';
     scoreTextEl.textContent = 'Error';
-    resultsEl.innerHTML = `<div class="item"><h3>⚠️ Error</h3><p>${escapeHtml(String(err.message))}</p></div>`;
   }
 }
 
@@ -425,11 +387,8 @@ function renderResults(payload, host) {
 
     const item = document.createElement('div');
     item.className = 'item';
-    item.dataset.category = check.category;
+    const statusLabel = data.status === 'ok' ? 'Cumple' : data.status === 'bad' ? 'No cumple' : data.status === 'warn' ? 'Revisar' : 'Manual';
     
-    const statusLabel = data.status === 'ok' ? '✓ Cumple' : data.status === 'bad' ? '✗ No cumple' : data.status === 'warn' ? '⚠ Revisar' : 'ℹ Manual';
-    const manualExtra = buildManualExtra(check.key, host);
-
     item.innerHTML = `
       <div class="item-head">
         <div>
@@ -441,9 +400,9 @@ function renderResults(payload, host) {
         </div>
       </div>
       <div class="meta">
-        <strong>Tipo:</strong> <span class="badge ${check.type === 'automatic' ? 'ok' : check.type === 'heuristic' ? 'warn' : 'manual'}">${check.type === 'automatic' ? '✓ Automático' : check.type === 'heuristic' ? '⚠ Heurístico' : 'ℹ Manual'}</span><br>
-        <strong>Resultado:</strong> ${escapeHtml(data.detail)}
-        ${manualExtra ? `<br><strong>Acción:</strong> ${manualExtra}` : ''}
+        <strong>Resultado:</strong> ${escapeHtml(data.detail)} <br>
+        ${check.helpUrl ? `<a class="small-link" href="${check.helpUrl}" target="_blank" style="color: #4f46e5; text-decoration: underline;">Saber más sobre este check ↗</a>` : ''}
+        ${buildManualExtra(check.key, host)}
       </div>
     `;
     resultsEl.appendChild(item);
@@ -554,16 +513,55 @@ function clearHistory() {
 function buildManualExtra(key, host) {
   if (key === 'searchPresence') {
     const q = encodeURIComponent(`site:${host}`);
-    return `<a class="small-link" href="https://www.google.com/search?q=${q}" target="_blank">Google</a> · <a class="small-link" href="https://www.bing.com/search?q=${q}" target="_blank">Bing</a>`;
+    return `<br><strong>Accesos:</strong> <a class="small-link" href="https://www.google.com/search?q=${q}" target="_blank">Google</a> · <a class="small-link" href="https://www.bing.com/search?q=${q}" target="_blank">Bing</a>`;
   }
   return '';
 }
 
 function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+
+exportBtn.addEventListener('click', () => {
+    const url = urlInput.value || 'web-analizada';
+    const score = scoreEl.textContent;
+    const scoreText = scoreTextEl.textContent;
+    const items = document.querySelectorAll('.item');
+
+    if (items.length === 0) {
+        alert("Primero realiza un análisis para poder exportar.");
+        return;
+    }
+
+    let report = `==========================================\n`;
+    report += `    REPORTE SEO: ${url}\n`;
+    report += `==========================================\n`;
+    report += `Puntuación: ${score}/100 (${scoreText})\n`;
+    report += `Fecha: ${new Date().toLocaleString()}\n\n`;
+
+    items.forEach((item) => {
+        const title = item.querySelector('h3').innerText;
+        const status = item.querySelector('.pill').innerText;
+        // Limpiamos el detalle de espacios extras
+        const detail = item.querySelector('.meta').innerText.replace(/\s+/g, ' ').trim();
+        
+        report += `[${status.toUpperCase()}] ${title}\n`;
+        report += `Detalle: ${detail}\n`;
+        report += `------------------------------------------\n`;
+    });
+
+    // Crear el archivo para descargar
+    const blob = new Blob([report], { type: 'text/plain' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    // Limpiar el nombre del archivo de caracteres raros
+    const fileName = `SEO_Audit_${url.replace(/https?:\/\/|www\.|\/|:/g, '')}.txt`;
+    
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+});

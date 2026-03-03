@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "SEO Slider Auditor Pro",
-  "version": "2.0.0",
-  "description": "Panel lateral avanzado para auditoría SEO con 25+ checks automáticos, métricas de rendimiento, accesibilidad, validación técnica e historial de análisis.",
+  "name": "SEO Slider Auditor",
+  "version": "1.0.0",
+  "description": "Panel lateral para revisar una URL con comprobaciones SEO, accesibilidad y presencia técnica.",
   "permissions": [
     "sidePanel",
-    "storage",
+    "tabs",
+    "scripting",
     "activeTab"
   ],
   "host_permissions": [
