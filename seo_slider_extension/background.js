@@ -13,6 +13,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Actualización de versión
     console.log('SEO Slider Auditor Pro actualizado a v2.0.0');
   }
+  //jaja niggnoc,
 });
 
 // Escuchar cambios de pestaña activa
