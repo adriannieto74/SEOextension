@@ -150,6 +150,13 @@ async function analyze() {
   }
 }
 
+const ICONS = {
+  ok: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon ok-icon"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+  warn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon warn-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+  bad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon bad-icon"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+  manual: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon manual-icon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+};
+
 function renderResults(payload, host) {
   resultsEl.innerHTML = '';
   let score = 0;
@@ -166,11 +173,15 @@ function renderResults(payload, host) {
     const item = document.createElement('div');
     item.className = 'item';
     const statusLabel = data.status === 'ok' ? 'Cumple' : data.status === 'bad' ? 'Error' : data.status === 'warn' ? 'Mejorable' : 'Manual';
+    const iconSvg = ICONS[data.status] || ICONS.manual;
 
     item.innerHTML = `
       <div class="item-head">
-        <div>
-          <h3>${check.title}</h3>
+        <div class="item-info">
+          <div class="title-row">
+            ${iconSvg}
+            <h3>${check.title}</h3>
+          </div>
           <p>${check.desc}</p>
         </div>
         <span class="pill ${data.status}">${statusLabel}</span>

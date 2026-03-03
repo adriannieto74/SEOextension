@@ -105,12 +105,30 @@ button:hover { filter: brightness(1.05); }
 }
 .item h3 { margin: 0; font-size: 14px; }
 .item p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.ok-icon { color: #22c55e; }
+.warn-icon { color: #eab308; }
+.bad-icon { color: #ef4444; }
+.manual-icon { color: #8aa0ff; }
+
 .pill {
-  font-size: 11px;
-  padding: 5px 8px;
+  font-size: 10px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-weight: 700;
+  font-weight: 800;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .pill.ok { background: rgba(20,195,142,.15); color: #79f2cc; }
 .pill.warn { background: rgba(245,183,0,.15); color: #ffd970; }
