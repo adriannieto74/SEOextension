@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "SEO Slider Auditor Plus",
+  "version": "2.1.0",
+  "description": "Auditor lateral de comprobaciones SEO, indexación, accesibilidad y presencia digital con historial y exportación.",
+  "permissions": ["storage", "sidePanel"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "SEO Slider Auditor Plus"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}

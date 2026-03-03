@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SEO Slider Auditor Plus</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <div>
+        <h1>SEO Slider Auditor Plus</h1>
+        <p>Revisión rápida de visibilidad, rastreo, señales técnicas y presencia digital.</p>
+      </div>
+      <button id="exportBtn" class="ghost">Exportar informe</button>
+    </header>
+
+    <section class="card controls">
+      <label for="urlInput">URL a analizar</label>
+      <div class="row">
+        <input id="urlInput" type="url" placeholder="https://tudominio.com" />
+        <button id="analyzeBtn">Analizar</button>
+      </div>
+      <div class="help">Comprueba páginas internas, indexación, robots, sitemap, redirecciones, accesibilidad, LinkedIn, Bing, chatbot y más señales útiles.</div>
+      <div id="status" class="status idle">Esperando URL…</div>
+    </section>
+
+    <section class="score-grid">
+      <div class="card big-score">
+        <div class="muted">Puntuación global</div>
+        <div id="globalScore" class="score-value">0</div>
+        <div class="meter"><span id="globalMeter"></span></div>
+      </div>
+      <div class="card chart-card">
+        <div class="muted">Por categorías</div>
+        <canvas id="scoreChart" width="320" height="160"></canvas>
+      </div>
+    </section>
+
+    <section id="categoryCards" class="category-cards"></section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Comprobaciones</h2>
+        <span class="muted">Automáticas, heurísticas y manuales</span>
+      </div>
+      <div id="checksList" class="checks-list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Historial</h2>
+        <button id="clearHistoryBtn" class="ghost small">Borrar</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
